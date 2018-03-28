@@ -1,0 +1,8 @@
+(jbuild_version 1)
+
+(library
+ ((name        opentracing)
+  (public_name opentracing)
+  (libraries (containers
+              lwt
+              uuidm))))

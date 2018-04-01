@@ -1,0 +1,13 @@
+(jbuild_version 1)
+
+(library
+ ((name        opentracing_datadog)
+  (public_name opentracing-datadog)
+  (libraries (opentracing
+              cohttp-lwt-unix
+              containers
+              lwt
+              lwt.unix
+              uri
+              yojson
+              ))))

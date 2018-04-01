@@ -1,0 +1,12 @@
+lib: [
+  "_build/install/default/lib/opentracing-datadog/META" {"META"}
+  "_build/install/default/lib/opentracing-datadog/opam" {"opam"}
+  "_build/install/default/lib/opentracing-datadog/opentracing_datadog.cmi"
+  "_build/install/default/lib/opentracing-datadog/opentracing_datadog.cmx"
+  "_build/install/default/lib/opentracing-datadog/opentracing_datadog.cmt"
+  "_build/install/default/lib/opentracing-datadog/opentracing_datadog.ml"
+  "_build/install/default/lib/opentracing-datadog/opentracing_datadog.cma"
+  "_build/install/default/lib/opentracing-datadog/opentracing_datadog.cmxa"
+  "_build/install/default/lib/opentracing-datadog/opentracing_datadog.a"
+  "_build/install/default/lib/opentracing-datadog/opentracing_datadog.cmxs"
+]

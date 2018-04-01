@@ -50,17 +50,16 @@ type tracer = Span.t Lwt_stream.t -> unit Lwt.t
 
 let noop_tracer : tracer =
   fun spans_stream ->
+    let section = Lwt_log.Section.make "tracer.noop" in
     spans_stream
     |> Lwt_stream.iter_s Span.(fun span ->
-        Lwt_log.notice_f "Trace %s Span %s [%s] (%fs)"
-          span.span_context.trace_id
-          span.span_context.span_id
-          span.operation_name
-          ((span.finish_ts |> CCOpt.get_or ~default:0.0) -. span.start_ts)
+        Lwt_log.notice ~section
+          (CCFormat.to_string Span.pp span)
       )
 
 let init (tracer : tracer) : t =
   let spans_stream, push_span = Lwt_stream.create () in
+  let () = Lwt.async (fun () -> tracer spans_stream) in
   { push_span }
 
 let trace (t : t) (operation_name : string) (f : unit -> 'a Lwt.t) =

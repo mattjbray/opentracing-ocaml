@@ -1,0 +1,24 @@
+opam-version: "2.0"
+name: "opentracing"
+version: "0.1"
+synopsis: "One-line description"
+description: """
+Longer description
+"""
+maintainer: "Name <email>"
+authors: "Name <email>"
+license: ""
+homepage: ""
+bug-reports: ""
+dev-repo: ""
+depends: [
+  "jbuilder" {build}
+  "opentracing"
+  "containers"
+  "uuidm"
+  "lwt"
+  "uri"
+  "yojson"
+  "cohttp"
+  "cohttp-lwt-unix"
+]

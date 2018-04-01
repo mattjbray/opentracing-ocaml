@@ -73,7 +73,8 @@ let log ~(tags : tag list) ?(log_ts : timestamp option) (span : t) : t =
 let pp : t CCFormat.printer =
   fun fmt t ->
     CCFormat.fprintf fmt
-      "[Trace=%S Span=%S Op=%S]"
+      "[Trace=%S Span=%S Op=%S Ts=%fs]"
       t.span_context.trace_id
       t.span_context.span_id
       t.operation_name
+      ((t.finish_ts |> CCOpt.get_or ~default:0.0) -. t.start_ts)

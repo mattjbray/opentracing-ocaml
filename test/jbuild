@@ -2,4 +2,4 @@
 
 (executable
  ((name test)
-  (libraries (opentracing-lwt lwt lwt.unix))))
+  (libraries (opentracing-lwt opentracing-datadog lwt lwt.unix))))

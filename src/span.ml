@@ -41,7 +41,6 @@ type t =
   ; references : reference list
   }
 
-
 let get_span_context (span : t) : span_context =
   span.span_context
 
@@ -51,7 +50,10 @@ let set_operation_name (operation_name : string) (span : t) : t =
 let finish ?(finish_ts : timestamp option) (span : t) : t =
   { span with
     finish_ts =
-      Some (CCOpt.get_lazy Unix.gettimeofday finish_ts)
+      begin match span.finish_ts with
+        | Some ts -> Some ts
+        | None -> Some (CCOpt.get_lazy Unix.gettimeofday finish_ts)
+      end
   }
 
 let set_tag ~(key : string) ~(value : tag_value) (span : t) : t =
@@ -67,3 +69,11 @@ let log ~(tags : tag list) ?(log_ts : timestamp option) (span : t) : t =
       }
       :: span.logs
   }
+
+let pp : t CCFormat.printer =
+  fun fmt t ->
+    CCFormat.fprintf fmt
+      "[Trace=%S Span=%S Op=%S]"
+      t.span_context.trace_id
+      t.span_context.span_id
+      t.operation_name

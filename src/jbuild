@@ -3,6 +3,4 @@
 (library
  ((name        opentracing)
   (public_name opentracing)
-  (libraries (containers
-              lwt
-              uuidm))))
+  (libraries (containers unix))))

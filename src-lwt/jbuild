@@ -1,0 +1,10 @@
+(jbuild_version 1)
+
+(library
+ ((name        opentracing_lwt)
+  (public_name opentracing-lwt)
+  (libraries (opentracing
+              containers
+              lwt
+              lwt.unix
+              uuidm))))

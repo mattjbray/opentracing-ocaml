@@ -13,5 +13,8 @@ bug-reports: ""
 dev-repo: ""
 depends: [
   "jbuilder" {build}
+  "opentracing"
   "containers"
+  "uuidm"
+  "lwt"
 ]

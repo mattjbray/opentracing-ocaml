@@ -1,3 +1,5 @@
 _build/
 _opam/
+.merlin
 opentracing.install
+opentracing-lwt.install

@@ -4,6 +4,7 @@
  ((name        opentracing_datadog)
   (public_name opentracing-datadog)
   (libraries (opentracing
+              opentracing-lwt
               cohttp-lwt-unix
               containers
               lwt

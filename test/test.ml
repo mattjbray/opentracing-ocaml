@@ -1,13 +1,19 @@
-open Opentracing_lwt
+(* module T = Opentracing_lwt.Noop_tracer *)
+module T = Opentracing_datadog.Tracer
+
+let tags = Opentracing.Tags.of_list
+    [ ( Opentracing_datadog.Tags.span_type, `String "web" )
+    ; ( Opentracing_datadog.Tags.service_name, `String "opentracing-ocaml" )
+    ; ( Opentracing_datadog.Tags.resource_name, `String "example_tracer" )
+    ]
 
 let () =
   Lwt_main.run @@
-  let tracer = Tracer.init
-      (* Tracer.noop_tracer *)
-      Opentracing_datadog.Tracer.tracer
-  in
+  let tracer = T.init in
   let open Lwt.Infix in
-  Tracer.trace tracer "hello" (fun () ->
+  T.trace tracer "hello" ~tags
+    (fun () ->
       Lwt_unix.sleep 0.5 >>= fun () ->
-      Tracer.trace tracer "world"
+      T.trace tracer "world" ~tags
         (fun () -> Lwt_unix.sleep 0.1))
+    >>= fun () -> Lwt_unix.sleep 1.0

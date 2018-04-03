@@ -4,15 +4,15 @@ module type Implementation = sig
   module Span : Span.Span
 
   val span_receiver : Span.t Lwt_stream.t -> unit Lwt.t
+
+  (** Tags that child spans will inherit from the parent span. *)
   val inherit_tags : string list
 end
 
 module Make(Impl : Implementation) = struct
   module Span = Impl.Span
 
-  type t =
-    { push_span : Span.t option -> unit }
-
+  (* Thread-local variable holding the current span. *)
   let span_key : Span.t Lwt_mvar.t Lwt.key =
     Lwt.new_key ()
 
@@ -57,12 +57,13 @@ module Make(Impl : Implementation) = struct
         Lwt_mvar.put span_mvar (f span)
       )
 
-  let init : t =
-    let spans_stream, push_span = Lwt_stream.create () in
-    let () = Lwt.async (fun () -> Impl.span_receiver spans_stream) in
-    { push_span }
+  let spans_stream, push_span = Lwt_stream.create ()
 
-  let trace (t : t) (operation_name : string)
+  let init : unit =
+    let () = Lwt.async (fun () -> Impl.span_receiver spans_stream) in
+    ()
+
+  let trace (operation_name : string)
       ?(tags : Tags.t = Tags.empty)
       (f : unit -> 'a Lwt.t) =
     let open Lwt.Infix in
@@ -93,7 +94,7 @@ module Make(Impl : Implementation) = struct
       (fun () ->
          Lwt_mvar.take span_mvar >>= fun span ->
          let span = Span.finish span in
-         t.push_span (Some span)
+         push_span (Some span)
          |> Lwt.return
       )
 

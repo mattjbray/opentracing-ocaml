@@ -4,6 +4,7 @@ module type Implementation = sig
   module Span : Span.Span
 
   val span_receiver : Span.t Lwt_stream.t -> unit Lwt.t
+  val flush : unit -> unit Lwt.t
 
   (** Tags that child spans will inherit from the parent span. *)
   val inherit_tags : string list
@@ -11,6 +12,14 @@ end
 
 module Make(Impl : Implementation) = struct
   module Span = Impl.Span
+
+  module Config = struct
+    type t =
+      { flush_interval_seconds : float }
+
+    let init : t =
+      { flush_interval_seconds = 1.0 }
+  end
 
   (* Thread-local variable holding the current span. *)
   let span_key : Span.t Lwt_mvar.t Lwt.key =
@@ -59,8 +68,22 @@ module Make(Impl : Implementation) = struct
 
   let spans_stream, push_span = Lwt_stream.create ()
 
-  let init : unit =
+  let init ?(config = Config.init) () : unit =
     let () = Lwt.async (fun () -> Impl.span_receiver spans_stream) in
+    let () = Lwt.async (fun () ->
+        let rec do_flush () =
+          let open Lwt.Infix in
+          Lwt_unix.sleep config.flush_interval_seconds >>= fun () ->
+          Impl.flush () >>= fun () ->
+          do_flush ()
+        in
+        do_flush ()
+      )
+    in
+    let () = Lwt_main.at_exit (fun () ->
+        let open Lwt.Infix in
+        Lwt_unix.sleep 0.1 >>= fun () ->
+        Impl.flush ()) in
     ()
 
   let trace (operation_name : string)

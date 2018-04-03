@@ -242,8 +242,18 @@ module Implementation : Opentracing_lwt.Tracer.Implementation = struct
 
   type t =
     { services : services
+    ; last_services : services (** Services at last flush. *)
     ; traces : DD_span.t list Int64Map.t
     }
+
+  let init : t =
+    { services = StringMap.empty
+    ; last_services = StringMap.empty
+    ; traces = Int64Map.empty
+    }
+
+  let t_mvar : t Lwt_mvar.t =
+    Lwt_mvar.create init
 
   let spans_collected : t -> int =
     fun t ->
@@ -252,73 +262,75 @@ module Implementation : Opentracing_lwt.Tracer.Implementation = struct
       |> List.map (fun (k, spans) -> List.length spans)
       |> List.fold_left (+) 0
 
-  let init : t =
-    { services = StringMap.empty
-    ; traces = Int64Map.empty
-    }
-
   module Span = Opentracing.Span.Make(Span_context)
 
   let span_receiver (spans_stream : Span.t Lwt_stream.t) : unit Lwt.t =
     let open Lwt.Infix in
-      Lwt_stream.fold_s
-        (fun ot_span t ->
-           let span = DD_span.t_of_opentracing_span ot_span in
-           Lwt_log.notice_f ~section
-             "Received span: %s"
-             (CCFormat.to_string Span.pp ot_span) >>= fun () ->
+    spans_stream
+    |> Lwt_stream.iter_s
+      (fun ot_span ->
+         let span = DD_span.t_of_opentracing_span ot_span in
+         Lwt_log.notice_f ~section
+           "Received span: %s"
+           (CCFormat.to_string Span.pp ot_span) >>= fun () ->
 
-           let t' =
-             { services =
-                 if span.service = "" then
+         Lwt_mvar.take t_mvar >>= fun t ->
+
+         let t' =
+           { t with
+             services =
+               if span.service = "" then
+                 t.services
+               else
+                 StringMap.add span.service
+                   Service.{ app = span.service; app_type = span.span_type }
                    t.services
-                 else
-                   StringMap.add span.service
-                     Service.{ app = span.service; app_type = span.span_type }
-                     t.services
-             ; traces =
-                 t.traces
-                 |> Int64Map.update span.trace_id
-                   (function
-                     | None -> Some [span]
-                     | Some spans -> Some (span :: spans)
-                   )
-             }
-           in
+           ; traces =
+               t.traces
+               |> Int64Map.update span.trace_id
+                 (function
+                   | None -> Some [span]
+                   | Some spans -> Some (span :: spans)
+                 )
+           }
+         in
 
-           begin
-             if spans_collected t' >= 2 then
-               Transport.send_traces (Int64Map.bindings t'.traces |> List.map snd) >>= fun (resp, body) ->
-               Cohttp_lwt.Body.to_string body >>= fun body_str ->
-               Lwt_log.notice_f ~section
-                 "Received response %i: %S"
-                 (Cohttp.Response.status resp |> Cohttp.Code.code_of_status)
-                 body_str
-               >>= fun () ->
-               Lwt.return { t' with traces = Int64Map.empty }
-             else
-               Lwt.return t'
-           end
-           >>= fun t' ->
+         Lwt_mvar.put t_mvar t'
+      )
 
-           begin
-             if not (StringMap.equal Service.equal t.services t'.services) then
-               Transport.send_services t'.services >>= fun (resp, body) ->
-               Cohttp_lwt.Body.to_string body >>= fun body_str ->
-               Lwt_log.notice_f ~section
-                 "Received response %i: %S"
-                 (Cohttp.Response.status resp |> Cohttp.Code.code_of_status)
-                 body_str
-             else
-               Lwt.return_unit
-           end >>= fun () ->
+  let unless (cond : bool) (f : unit -> unit Lwt.t) : unit Lwt.t =
+    if cond then Lwt.return_unit else f ()
 
-           Lwt.return t'
-        )
-        spans_stream
-        init
-      >>= fun _ ->
-      Lwt.return_unit
+  let flush () : unit Lwt.t =
+    let open Lwt.Infix in
+    Lwt_log.notice ~section "flush" >>= fun () ->
+    Lwt_mvar.take t_mvar >>= fun t ->
+    unless (Int64Map.is_empty t.traces)
+      (fun () ->
+         Transport.send_traces (Int64Map.bindings t.traces |> List.map snd) >>= fun (resp, body) ->
+         Cohttp_lwt.Body.to_string body >>= fun body_str ->
+         Lwt_log.notice_f ~section
+           "Received response %i: %S"
+           (Cohttp.Response.status resp |> Cohttp.Code.code_of_status)
+           body_str
+      ) >>= fun () ->
+
+    unless (StringMap.equal Service.equal t.services t.last_services)
+      (fun () ->
+         Transport.send_services t.services >>= fun (resp, body) ->
+         Cohttp_lwt.Body.to_string body >>= fun body_str ->
+         Lwt_log.notice_f ~section
+           "Received response %i: %S"
+           (Cohttp.Response.status resp |> Cohttp.Code.code_of_status)
+           body_str
+      ) >>= fun () ->
+
+    Lwt_mvar.put t_mvar
+      { t with
+        traces = Int64Map.empty
+      ; last_services = t.services
+      }
+
 end
 
 module Tracer = Opentracing_lwt.Tracer.Make(Implementation)

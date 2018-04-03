@@ -22,6 +22,8 @@ module Noop_implementation : Tracer.Implementation = struct
           (CCFormat.to_string Span.pp span)
       )
 
+  let flush () = Lwt.return_unit
+
   let inherit_tags = []
 end
 

@@ -26,4 +26,5 @@ stop-datadog-agent:
 	docker rm dd-agent
 
 run-example:
+	date
 	jbuilder exec -- example_trace

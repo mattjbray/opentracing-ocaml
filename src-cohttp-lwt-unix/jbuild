@@ -1,0 +1,11 @@
+(jbuild_version 1)
+
+(library
+ ((name        opentracing_cohttp_lwt_unix)
+  (public_name opentracing-cohttp-lwt-unix)
+  (libraries (opentracing
+              opentracing-lwt
+              cohttp
+              cohttp-lwt-unix
+              lwt
+              ))))

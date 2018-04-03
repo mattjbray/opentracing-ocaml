@@ -84,6 +84,11 @@ module DD_span = struct
       (StringMap.bindings meta
        |> List.map (fun (k, v) -> (k, `String v)))
 
+  let json_of_metrics (metrics : float StringMap.t) : Yojson.json =
+    `Assoc
+      (StringMap.bindings metrics
+       |> List.map (fun (k, v) -> (k, `Float v)))
+
   let json_of_t (t : t) : Yojson.json =
     `Assoc
       [ ( "trace_id", json_of_int64 t.trace_id )
@@ -97,6 +102,7 @@ module DD_span = struct
       ; ( "parent_id", t.parent_id |> CCOpt.map_or ~default:`Null json_of_int64 )
       ; ( "error", `Intlit (Int32.to_string t.error) )
       ; ( "meta", json_of_meta t.meta )
+      ; ( "metrics", json_of_metrics t.metrics )
       ]
 
   let get_string_tag (tag_key : string) (tags : Opentracing.Tags.t) : string =

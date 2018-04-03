@@ -13,7 +13,7 @@ let () =
   let open Lwt.Infix in
   T.trace tracer "hello" ~tags
     (fun () ->
-      Lwt_unix.sleep 0.5 >>= fun () ->
-      T.trace tracer "world"
-        (fun () -> Lwt_unix.sleep 0.1))
+      Lwt_unix.sleep (0.1 +. Random.float 0.5) >>= fun () ->
+      T.trace tracer "world" ~tags:(Opentracing.Tags.of_list [ ("my.metric", `Int (Random.int 10))])
+        (fun () -> Lwt_unix.sleep (0.1 +. Random.float 0.1)))
     >>= fun () -> Lwt_unix.sleep 1.0

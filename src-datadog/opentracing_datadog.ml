@@ -26,9 +26,12 @@ module Tags = struct
 
   (* Error defines an error. *)
   let error = "error.error"
+
+  let reserved_tags =
+    [ span_type; service_name; resource_name; error ]
 end
 
-module Span = struct
+module DD_span = struct
   type t =
     { name : string
     (** Name is the name of the operation being measured. Some examples
@@ -124,7 +127,7 @@ module Span = struct
     ; meta =
         Opentracing.Tags.bindings ot_span.tags
         |> CCList.filter_map (fun (k, v) ->
-            if List.mem k Tags.[span_type; service_name; resource_name; error] then
+            if List.mem k Tags.reserved_tags then
               None
             else
               match v with
@@ -192,11 +195,11 @@ module Transport = struct
 
   let headers = Cohttp.Header.of_list [("Content-Type", "application/json")]
 
-  let send_traces (traces : Span.t list list) =
+  let send_traces (traces : DD_span.t list list) =
     let traces_json =
       `List
         (traces |> List.map (fun spans ->
-             `List (spans |> List.map Span.json_of_t)
+             `List (spans |> List.map DD_span.json_of_t)
            ))
     in
     let body_str =
@@ -224,14 +227,16 @@ module Transport = struct
     Cohttp_lwt_unix.Client.put ~headers ~body service_uri
 end
 
-module Tracer = struct
+module Implementation : Opentracing_lwt.Tracer.Implementation = struct
   let section = Lwt_log.Section.make "tracer.datadog"
+
+  let inherit_tags = Tags.reserved_tags
 
   module Int64Map = CCMap.Make(Int64)
 
   type t =
     { services : services
-    ; traces : Span.t list Int64Map.t
+    ; traces : DD_span.t list Int64Map.t
     }
 
   let spans_collected : t -> int =
@@ -246,17 +251,16 @@ module Tracer = struct
     ; traces = Int64Map.empty
     }
 
-  module Tracer_lwt = Opentracing_lwt.Tracer.Make(Span_context)
+  module Span = Opentracing.Span.Make(Span_context)
 
-  let tracer : Tracer_lwt.tracer =
+  let span_receiver (spans_stream : Span.t Lwt_stream.t) : unit Lwt.t =
     let open Lwt.Infix in
-    fun spans_stream ->
       Lwt_stream.fold_s
         (fun ot_span t ->
-           let span = Span.t_of_opentracing_span ot_span in
+           let span = DD_span.t_of_opentracing_span ot_span in
            Lwt_log.notice_f ~section
              "Received span: %s"
-             (CCFormat.to_string Tracer_lwt.Span.pp ot_span) >>= fun () ->
+             (CCFormat.to_string Span.pp ot_span) >>= fun () ->
 
            let t' =
              { services =
@@ -309,7 +313,6 @@ module Tracer = struct
         init
       >>= fun _ ->
       Lwt.return_unit
-
-  let init = Tracer_lwt.init tracer
-  let trace = Tracer_lwt.trace
 end
+
+module Tracer = Opentracing_lwt.Tracer.Make(Implementation)

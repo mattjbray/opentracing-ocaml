@@ -11,10 +11,10 @@ module Span_context : Opentracing.Span.Span_context = struct
   let new_span_id () = Uuidm.create `V4
 end
 
-include Tracer.Make(Span_context)
+module Noop_implementation : Tracer.Implementation = struct
+  module Span = Opentracing.Span.Make(Span_context)
 
-let noop_tracer : tracer =
-  fun spans_stream ->
+  let span_receiver (spans_stream : Span.t Lwt_stream.t) : unit Lwt.t =
     let section = Lwt_log.Section.make "tracer.noop" in
     spans_stream
     |> Lwt_stream.iter_s Span.(fun span ->
@@ -22,4 +22,7 @@ let noop_tracer : tracer =
           (CCFormat.to_string Span.pp span)
       )
 
-let init = init noop_tracer
+  let inherit_tags = []
+end
+
+include Tracer.Make(Noop_implementation)

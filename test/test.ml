@@ -14,6 +14,6 @@ let () =
   T.trace tracer "hello" ~tags
     (fun () ->
       Lwt_unix.sleep 0.5 >>= fun () ->
-      T.trace tracer "world" ~tags
+      T.trace tracer "world"
         (fun () -> Lwt_unix.sleep 0.1))
     >>= fun () -> Lwt_unix.sleep 1.0

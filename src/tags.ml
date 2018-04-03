@@ -14,3 +14,4 @@ let add = StringMap.add
 let of_list = StringMap.of_list
 let find_opt = StringMap.find_opt
 let bindings = StringMap.bindings
+let filter = StringMap.filter

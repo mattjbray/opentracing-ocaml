@@ -5,8 +5,8 @@ _opam:
 	opam switch create . --empty
 
 setup: _opam
-	opam install ocaml-base-compiler.4.06.0
-	opam install . --deps-only --with-test
+	opam install -y ocaml-base-compiler.4.06.0 merlin utop ocp-indent
+	opam install -y . --deps-only --with-test
 
 API_KEY=
 

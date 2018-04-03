@@ -9,7 +9,7 @@ module type Span_context = sig
   val pp_span_id : span_id CCFormat.printer
 end
 
-module type Span = sig
+module type S = sig
   type timestamp = float
 
   module Context : sig
@@ -44,11 +44,12 @@ module type Span = sig
     ; references : reference list
     }
 
+  val set_tag : key:string -> value:Tags.value -> t -> t
   val finish : ?finish_ts:timestamp -> t -> t
   val pp : t CCFormat.printer
 end
 
-module Make(M : Span_context) : Span
+module Make(M : Span_context) : S
   with type Context.trace_id = M.trace_id
   with type Context.span_id = M.span_id
 = struct

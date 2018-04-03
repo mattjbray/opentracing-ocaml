@@ -15,3 +15,10 @@ let of_list = StringMap.of_list
 let find_opt = StringMap.find_opt
 let bindings = StringMap.bindings
 let filter = StringMap.filter
+
+
+module Http = struct
+  let url = "http.url"
+  let meth = "http.method"
+  let status_code = "http.status_code"
+end

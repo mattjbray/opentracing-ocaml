@@ -1,7 +1,7 @@
 open Opentracing
 
 module type Implementation = sig
-  module Span : Span.Span
+  module Span : Span.S
 
   val span_receiver : Span.t Lwt_stream.t -> unit Lwt.t
   val flush : unit -> unit Lwt.t
@@ -10,7 +10,22 @@ module type Implementation = sig
   val inherit_tags : string list
 end
 
-module Make(Impl : Implementation) = struct
+module type S = sig
+  module Span : Span.S
+
+  module Config : sig
+    type t =
+      { flush_interval_seconds : float }
+
+    val init : t
+  end
+
+  val init : ?config:Config.t -> unit -> unit
+  val trace : string -> ?tags:Opentracing.Tags.t -> (unit -> 'a Lwt.t) -> 'a Lwt.t
+  val modify_span : (Span.t -> Span.t) -> unit Lwt.t
+end
+
+module Make(Impl : Implementation) : S = struct
   module Span = Impl.Span
 
   module Config = struct
@@ -57,6 +72,7 @@ module Make(Impl : Implementation) = struct
     in
     span
 
+  (** Modify the current span. *)
   let modify_span (f : Span.t -> Span.t) : unit Lwt.t =
     match Lwt.get span_key with
     | None -> Lwt.return_unit

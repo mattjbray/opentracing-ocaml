@@ -126,10 +126,12 @@ module DD_span = struct
         ot_span.tags
         |> get_string_tag Tags.span_type
     ; start =
-        seconds_to_nanoseconds ot_span.start_ts
+        Mtime.to_uint64_ns ot_span.start_ts
     ; duration =
-        (ot_span.finish_ts |> CCOpt.get_or ~default:0.0) -. ot_span.start_ts
-        |> seconds_to_nanoseconds
+        Mtime.span
+          ot_span.start_ts
+          (ot_span.finish_ts |> CCOpt.get_lazy Mtime_clock.now)
+        |> Mtime.Span.to_uint64_ns
     ; meta =
         Opentracing.Tags.bindings ot_span.tags
         |> CCList.filter_map (fun (k, v) ->

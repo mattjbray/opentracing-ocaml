@@ -42,7 +42,7 @@ module Make(Impl : Implementation) : S = struct
 
   let start_span
       ?(references : Span.reference list = [])
-      ?(start_ts : float option)
+      ?(start_ts : Mtime.t option)
       ?(tags : Tags.t = Tags.empty)
       (operation_name : string)
     : Span.t
@@ -62,7 +62,7 @@ module Make(Impl : Implementation) : S = struct
     let span =
       { operation_name
       ; start_ts =
-          CCOpt.get_lazy Unix.gettimeofday start_ts
+          CCOpt.get_lazy Mtime_clock.now start_ts
       ; finish_ts = None
       ; tags
       ; logs = []

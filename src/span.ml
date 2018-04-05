@@ -10,8 +10,6 @@ module type Span_context = sig
 end
 
 module type S = sig
-  type timestamp = float
-
   module Context : sig
     include Span_context
     type t =
@@ -21,7 +19,7 @@ module type S = sig
   end
 
   type span_log =
-    { log_ts : timestamp
+    { log_ts : Mtime.t
     ; log_tags : Tags.t
     }
 
@@ -36,8 +34,8 @@ module type S = sig
 
   type t =
     { operation_name : string
-    ; start_ts : timestamp
-    ; finish_ts : timestamp option
+    ; start_ts : Mtime.t
+    ; finish_ts : Mtime.t option
     ; tags : Tags.t
     ; logs : span_log list
     ; span_context : Context.t
@@ -45,7 +43,7 @@ module type S = sig
     }
 
   val set_tag : key:string -> value:Tags.value -> t -> t
-  val finish : ?finish_ts:timestamp -> t -> t
+  val finish : ?finish_ts:Mtime.t -> t -> t
   val pp : t CCFormat.printer
 end
 
@@ -53,10 +51,8 @@ module Make(M : Span_context) : S
   with type Context.trace_id = M.trace_id
   with type Context.span_id = M.span_id
 = struct
-  type timestamp = float
-
   type span_log =
-    { log_ts : timestamp
+    { log_ts : Mtime.t
     ; log_tags : Tags.t
     }
 
@@ -80,8 +76,8 @@ module Make(M : Span_context) : S
 
   type t =
     { operation_name : string
-    ; start_ts : timestamp
-    ; finish_ts : timestamp option
+    ; start_ts : Mtime.t
+    ; finish_ts : Mtime.t option
     ; tags : Tags.t
     ; logs : span_log list
     ; span_context : Context.t
@@ -94,12 +90,12 @@ module Make(M : Span_context) : S
   let set_operation_name (operation_name : string) (span : t) : t =
     { span with operation_name }
 
-  let finish ?(finish_ts : timestamp option) (span : t) : t =
+  let finish ?(finish_ts : Mtime.t option) (span : t) : t =
     { span with
       finish_ts =
         begin match span.finish_ts with
           | Some ts -> Some ts
-          | None -> Some (CCOpt.get_lazy Unix.gettimeofday finish_ts)
+          | None -> Some (CCOpt.get_lazy Mtime_clock.now finish_ts)
         end
     }
 
@@ -108,10 +104,10 @@ module Make(M : Span_context) : S
       tags = Tags.add key value span.tags
     }
 
-  let log ~(tags : Tags.t) ?(log_ts : timestamp option) (span : t) : t =
+  let log ~(tags : Tags.t) ?(log_ts : Mtime.t option) (span : t) : t =
     { span with
       logs =
-        { log_ts = CCOpt.get_lazy Unix.gettimeofday log_ts
+        { log_ts = CCOpt.get_lazy Mtime_clock.now log_ts
         ; log_tags = tags
         }
         :: span.logs
@@ -120,9 +116,12 @@ module Make(M : Span_context) : S
   let pp : t CCFormat.printer =
     fun fmt t ->
       CCFormat.fprintf fmt
-        "[Trace=%a Span=%a Op=%S Ts=%fs]"
+        "[Trace=%a Span=%a Op=%S Ts=%a]"
         Context.pp_trace_id t.span_context.trace_id
         Context.pp_span_id t.span_context.span_id
         t.operation_name
-        ((t.finish_ts |> CCOpt.get_or ~default:0.0) -. t.start_ts)
+        Mtime.Span.pp
+        (Mtime.span
+           (t.finish_ts |> CCOpt.get_lazy Mtime_clock.now)
+           t.start_ts)
 end

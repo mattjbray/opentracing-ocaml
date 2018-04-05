@@ -3,4 +3,4 @@
 (library
  ((name        opentracing)
   (public_name opentracing)
-  (libraries (containers unix))))
+  (libraries (containers mtime mtime.clock.os))))

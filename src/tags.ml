@@ -16,6 +16,9 @@ let find_opt = StringMap.find_opt
 let bindings = StringMap.bindings
 let filter = StringMap.filter
 
+module Resource = struct
+  let name = "resource.name"
+end
 
 module Http = struct
   let url = "http.url"

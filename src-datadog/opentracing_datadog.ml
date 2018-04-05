@@ -303,7 +303,6 @@ module Implementation : Opentracing_lwt.Tracer.Implementation = struct
 
   let flush () : unit Lwt.t =
     let open Lwt.Infix in
-    Lwt_log.notice ~section "flush" >>= fun () ->
     Lwt_mvar.take t_mvar >>= fun t ->
     unless (Int64Map.is_empty t.traces)
       (fun () ->
@@ -333,4 +332,26 @@ module Implementation : Opentracing_lwt.Tracer.Implementation = struct
 
 end
 
-module Tracer = Opentracing_lwt.Tracer.Make(Implementation)
+module type Config = sig
+  val service_name : string
+  val service_type : string
+end
+
+module Tracer(C : Config) : Opentracing_lwt.Tracer.S = struct
+  module T = Opentracing_lwt.Tracer.Make(Implementation)
+  module Config = T.Config
+  module Span = T.Span
+
+  let modify_span = T.modify_span
+
+  let init = T.init
+
+  let trace (operation_name: string) ?(tags = Opentracing.Tags.empty) (f : unit -> 'a Lwt.t) : 'a Lwt.t =
+    let tags =
+      tags
+      |> Opentracing.Tags.add Tags.service_name (`String C.service_name)
+      |> Opentracing.Tags.add Tags.span_type (`String C.service_type)
+      |> Opentracing.Tags.add Tags.resource_name (`String "lwt_main")
+    in
+    T.trace ~tags operation_name f
+end

@@ -1,0 +1,9 @@
+(jbuild_version 1)
+
+(library
+ ((name opentracing_opium)
+  (public_name opentracing-opium)
+  (libraries (opentracing
+              opentracing-lwt
+              opium
+              lwt))))

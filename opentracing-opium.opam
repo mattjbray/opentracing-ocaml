@@ -1,5 +1,5 @@
 opam-version: "2.0"
-name: "opentracing"
+name: "opentracing-opium"
 version: "0.1"
 synopsis: "One-line description"
 description: """
@@ -15,11 +15,7 @@ depends: [
   "jbuilder" {build}
   "opentracing"
   "opentracing-lwt"
-  "containers"
   "lwt"
-  "uri"
-  "yojson"
-  "cohttp"
-  "cohttp-lwt-unix"
+  "opium"
 ]
 build: [["jbuilder" "build" "-p" name "-j" jobs]]

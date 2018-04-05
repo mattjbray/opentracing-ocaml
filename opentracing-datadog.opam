@@ -15,10 +15,10 @@ depends: [
   "jbuilder" {build}
   "opentracing"
   "containers"
-  "uuidm"
   "lwt"
   "uri"
   "yojson"
   "cohttp"
   "cohttp-lwt-unix"
 ]
+build: [["jbuilder" "build" "-p" name "-j" jobs]]

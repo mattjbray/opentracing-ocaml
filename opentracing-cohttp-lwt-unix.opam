@@ -18,3 +18,4 @@ depends: [
   "cohttp"
   "cohttp-lwt-unix"
 ]
+build: [["jbuilder" "build" "-p" name "-j" jobs]]

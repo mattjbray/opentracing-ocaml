@@ -18,3 +18,4 @@ depends: [
   "uuidm"
   "lwt"
 ]
+build: [["jbuilder" "build" "-p" name "-j" jobs]]
